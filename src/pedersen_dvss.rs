@@ -1,11 +1,10 @@
 // Pedersen Decentralized Verifiable secret sharing
 
+use crate::pedersen_vss::PedersenVSS;
+use amcl_wrapper::field_elem::FieldElement;
 use amcl_wrapper::group_elem::GroupElement;
 use amcl_wrapper::group_elem_g1::G1;
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
 use std::collections::HashMap;
-use crate::pedersen_vss::PedersenVSS;
-
 
 // Pedersen Decentralized Verifiable secret sharing. Based on the paper "Non-interactive and information-theoretic
 // secure verifiable secret sharing", section 5. https://www.cs.cornell.edu/courses/cs754/2001fa/129.PDF
@@ -132,53 +131,52 @@ impl PedersenDVSSParticipant {
     }
 }
 
-/// Create participants that take part in a decentralized secret sharing and perform the secret sharing.
-#[cfg(test)]
-pub fn share_secret_for_testing(
-    threshold: usize,
-    total: usize,
-    g: &G1,
-    h: &G1,
-) -> Vec<PedersenDVSSParticipant> {
-    let mut participants = vec![];
-
-    // Each participant generates a new secret and verifiable shares of that secret for everyone.
-    for i in 1..=total {
-        let p = PedersenDVSSParticipant::new(i, threshold, total, g, h);
-        participants.push(p);
-    }
-
-    // Every participant gives shares of its secret to others
-    for i in 0..total {
-        for j in 0..total {
-            if i == j {
-                continue;
-            }
-            let (id, comm_coeffs, (s, t)) = (
-                participants[j].id.clone(),
-                participants[j].comm_coeffs.clone(),
-                (
-                    participants[j].s_shares[&(i + 1)].clone(),
-                    participants[j].t_shares[&(i + 1)].clone(),
-                ),
-            );
-
-            let recv_p = &mut participants[i];
-            recv_p.received_share(id, comm_coeffs, (s, t), threshold, total, g, h);
-        }
-    }
-
-    // Every participant computes its share to the distributed secret.
-    for i in 0..total {
-        participants[i].compute_final_comm_coeffs_and_shares(threshold, total, g, h);
-    }
-    participants
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::shamir_secret_sharing::reconstruct_secret;
+
+    /// Create participants that take part in a decentralized secret sharing and perform the secret sharing.
+    fn share_secret_for_testing(
+        threshold: usize,
+        total: usize,
+        g: &G1,
+        h: &G1,
+    ) -> Vec<PedersenDVSSParticipant> {
+        let mut participants = vec![];
+
+        // Each participant generates a new secret and verifiable shares of that secret for everyone.
+        for i in 1..=total {
+            let p = PedersenDVSSParticipant::new(i, threshold, total, g, h);
+            participants.push(p);
+        }
+
+        // Every participant gives shares of its secret to others
+        for i in 0..total {
+            for j in 0..total {
+                if i == j {
+                    continue;
+                }
+                let (id, comm_coeffs, (s, t)) = (
+                    participants[j].id.clone(),
+                    participants[j].comm_coeffs.clone(),
+                    (
+                        participants[j].s_shares[&(i + 1)].clone(),
+                        participants[j].t_shares[&(i + 1)].clone(),
+                    ),
+                );
+
+                let recv_p = &mut participants[i];
+                recv_p.received_share(id, comm_coeffs, (s, t), threshold, total, g, h);
+            }
+        }
+
+        // Every participant computes its share to the distributed secret.
+        for i in 0..total {
+            participants[i].compute_final_comm_coeffs_and_shares(threshold, total, g, h);
+        }
+        participants
+    }
 
     #[test]
     fn test_Pedersen_DVSS() {

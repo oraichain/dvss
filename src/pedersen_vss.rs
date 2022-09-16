@@ -1,10 +1,10 @@
 // Pedersen Verifiable secret sharing
 
-use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
-use amcl_wrapper::group_elem_g1::{G1, G1Vector};
-use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
-use std::collections::HashMap;
 use crate::shamir_secret_sharing::get_shared_secret_with_polynomial;
+use amcl_wrapper::field_elem::{FieldElement, FieldElementVector};
+use amcl_wrapper::group_elem::{GroupElement, GroupElementVector};
+use amcl_wrapper::group_elem_g1::{G1Vector, G1};
+use std::collections::HashMap;
 
 // Pedersen Verifiable secret sharing. Based on the paper "Non-interactive and information-theoretic
 // secure verifiable secret sharing", section 4. https://www.cs.cornell.edu/courses/cs754/2001fa/129.PDF.
@@ -89,7 +89,10 @@ impl PedersenVSS {
         bases.push(g.negation());
         bases.push(h.negation());
 
-        bases.multi_scalar_mul_var_time(&exp).unwrap().is_identity()
+        bases
+            .multi_scalar_mul_var_time(exp.iter())
+            .unwrap()
+            .is_identity()
     }
 }
 
